@@ -67,6 +67,7 @@ export default function Editor({ file, onBack }: EditorProps) {
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadStatus, setLoadStatus] = useState('Reading file...');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
 
   const [activeTool, setActiveTool] = useState<ToolType>('select');
   const [zoom, setZoom] = useState(() => window.innerWidth < 768 ? Math.min(1, (window.innerWidth - 32) / 612) : 1);
@@ -117,6 +118,7 @@ export default function Editor({ file, onBack }: EditorProps) {
       setLoadProgress(0);
       setLoadStatus('Reading file...');
       setLoadError(null);
+      setAnalysisWarning(null);
 
       try {
         setLoadStatus('Loading PDF document...');
@@ -164,7 +166,9 @@ export default function Editor({ file, onBack }: EditorProps) {
         setDocState(initialState);
         const failedAnalysisPages = pages.filter((page) => page.analysisError);
         if (failedAnalysisPages.length > 0) {
-          setLoadError(`Analysis failed for ${failedAnalysisPages.map((page) => `page ${page.pageNumber}: ${page.analysisError}`).join('; ')}`);
+          setAnalysisWarning(`The PDF opened, but text/image analysis failed on ${failedAnalysisPages.length} page${failedAnalysisPages.length === 1 ? '' : 's'}. You can still view and edit the document; some existing text may not be selectable.`);
+        } else {
+          setAnalysisWarning(null);
         }
         setLoadProgress(1);
         setLoadStatus('Ready');
@@ -882,6 +886,11 @@ export default function Editor({ file, onBack }: EditorProps) {
         <LeftToolbar activeTool={activeTool} onToolChange={handleToolChange} />
 
         <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden max-md:order-1">
+          {analysisWarning && (
+            <div role="status" className="px-3 py-2 text-xs text-amber-900 bg-amber-50 border-b border-amber-200">
+              {analysisWarning}
+            </div>
+          )}
           {/* Secondary toolbar for document operations */}
           <SecondaryToolbar
             onMerge={() => fileInputMergeRef.current?.click()}

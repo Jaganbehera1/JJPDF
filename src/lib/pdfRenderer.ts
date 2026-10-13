@@ -121,7 +121,12 @@ export async function extractPageData(
     }
   }
   const textSpans: TextSpan[] = [];
-  for (const item of textContent.items as Array<Record<string, unknown>>) {
+  // Some mobile Safari/WebView versions expose PDF.js text items as an
+  // array-like object without a working iterator. Indexed access works in
+  // those engines and avoids `undefined is not a function` during analysis.
+  const textItems = textContent.items as ArrayLike<Record<string, unknown>>;
+  for (let itemIndex = 0; itemIndex < textItems.length; itemIndex++) {
+    const item = textItems[itemIndex];
     if (!('str' in item) || typeof item.str !== 'string' || item.str.trim() === '') continue;
 
     const transform = pdfjsLib.Util.transform(viewport.transform, item.transform as number[]);
@@ -388,10 +393,20 @@ export async function extractAllPages(
       pageData = await extractPageData(pdf, i);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
+      let width = 612;
+      let height = 792;
+      try {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1 });
+        width = viewport.width;
+        height = viewport.height;
+      } catch {
+        // Keep usable page dimensions when optional content analysis fails.
+      }
       pageData = {
         pageNumber: i,
-        width: 612,
-        height: 792,
+        width,
+        height,
         rotation: 0,
         textSpans: [],
         imageBoxes: [],
