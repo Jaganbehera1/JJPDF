@@ -187,10 +187,10 @@ export default function LandingPage({ onUpload }: LandingPageProps) {
               100% Browser-Based — Your Files Never Leave Your Device
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight">
-              Everything You Need to Edit PDFs
+              Free Online PDF Editor for Text, Images, and Pages
             </h1>
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-              Edit text, replace images, annotate, sign, and manage your PDF documents online.
+              Edit PDF text and images, add signatures, merge or split documents, and organize pages in your browser. Your files stay on your device.
             </p>
           </div>
 
