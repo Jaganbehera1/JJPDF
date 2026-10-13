@@ -369,6 +369,10 @@ export async function applyEmbeddedFontStyles(file: File, pages: PageData[]): Pr
       const fontName = baseFont.decodeText().replace(/^[A-Z]{6}\+/, '');
       span.bold = /bold|black|demi|heavy/i.test(fontName);
       span.italic = /italic|oblique/i.test(fontName);
+      // Preserve the embedded PDF font's real family for the editor UI. Export
+      // will reuse the original embedded program when it contains the new text.
+      const family = fontName.replace(/[-_,](bold|italic|oblique|regular|medium|light|black|semibold|demi).*$/i, '').replace(/^[A-Z]{6}\+/, '');
+      if (family) span.fontFamily = family;
     }
   }
 }

@@ -101,6 +101,13 @@ export async function exportPdf(
     return originalFontCache.get(cacheKey)!;
   };
   const fontForText = async (text: string, standardFont: PDFFont, edit?: TextEdit): Promise<PDFFont> => {
+    // Reuse the source document's embedded font first whenever it contains all
+    // replacement glyphs (for example, embedded Calibri or Kalinga).
+    const originalFont = edit ? await originalFontForEdit(edit) : null;
+    if (originalFont) {
+      const characterSet = new Set(originalFont.getCharacterSet());
+      if ([...text].every((character) => characterSet.has(character.codePointAt(0)!))) return originalFont;
+    }
     if (/[^\u0000-\u00ff]/u.test(text)) {
       if (!unicodeFontPromise) {
         unicodeFontPromise = fetch('/fonts/NotoSansOriya-Regular.ttf')
@@ -112,12 +119,7 @@ export async function exportPdf(
       }
       return unicodeFontPromise;
     }
-    const originalFont = edit ? await originalFontForEdit(edit) : null;
-    if (!originalFont) return standardFont;
-    const characterSet = new Set(originalFont.getCharacterSet());
-    return [...text].every((character) => characterSet.has(character.codePointAt(0)!))
-      ? originalFont
-      : standardFont;
+    return standardFont;
   };
 
   // Get pages in the correct order, respecting page reordering and deletion

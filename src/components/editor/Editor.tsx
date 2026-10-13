@@ -74,6 +74,7 @@ export default function Editor({ file, onBack }: EditorProps) {
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  const [selectedSignatureId, setSelectedSignatureId] = useState<string | null>(null);
 
   const [annotationColor, setAnnotationColor] = useState('#ffeb3b');
   const [annotationWidth, setAnnotationWidth] = useState(3);
@@ -232,6 +233,7 @@ export default function Editor({ file, onBack }: EditorProps) {
       setSelectedTextId(null);
       setSelectedImageId(null);
       setSelectedAnnotationId(null);
+      setSelectedSignatureId(null);
     }
     if (tool === 'organize') {
       setShowOrganize(true);
@@ -366,6 +368,15 @@ export default function Editor({ file, onBack }: EditorProps) {
       ...prev,
       annotations: prev.annotations.map((a) => a.id === id ? { ...a, ...updates } : a),
     }));
+  }, [updateDocState]);
+
+  const handleUpdateSignature = useCallback((id: string, updates: { bbox?: BoundingBox }) => {
+    updateDocState((prev) => ({ ...prev, signatures: prev.signatures.map((signature) => signature.id === id ? { ...signature, ...updates } : signature) }));
+  }, [updateDocState]);
+
+  const handleDeleteSignature = useCallback((id: string) => {
+    updateDocState((prev) => ({ ...prev, signatures: prev.signatures.filter((signature) => signature.id !== id) }));
+    setSelectedSignatureId(null);
   }, [updateDocState]);
 
   // Delete annotation
@@ -781,6 +792,7 @@ export default function Editor({ file, onBack }: EditorProps) {
   const selectedText = docState?.textEdits.find((t) => t.id === selectedTextId) || null;
   const selectedImage = docState?.images.find((i) => i.id === selectedImageId) || null;
   const selectedAnnotation = docState?.annotations.find((a) => a.id === selectedAnnotationId) || null;
+  const selectedSignature = docState?.signatures.find((signature) => signature.id === selectedSignatureId) || null;
 
   // Hidden file inputs
   const hiddenInputs = (
@@ -916,6 +928,7 @@ export default function Editor({ file, onBack }: EditorProps) {
             selectedTextId={selectedTextId}
             selectedImageId={selectedImageId}
             selectedAnnotationId={selectedAnnotationId}
+            selectedSignatureId={selectedSignatureId}
             annotationColor={annotationColor}
             annotationWidth={annotationWidth}
             shapeKind={shapeKind}
@@ -923,11 +936,14 @@ export default function Editor({ file, onBack }: EditorProps) {
             onSelectText={setSelectedTextId}
             onSelectImage={setSelectedImageId}
             onSelectAnnotation={setSelectedAnnotationId}
+            onSelectSignature={setSelectedSignatureId}
             onAddText={handleAddText}
             onAddAnnotation={handleAddAnnotation}
             onUpdateAnnotation={handleUpdateAnnotation}
             onUpdateImage={handleUpdateImage}
             onUpdateText={handleUpdateText}
+            onUpdateSignature={handleUpdateSignature}
+            onDeleteSignature={handleDeleteSignature}
             onAddImageItem={handleAddImageItem}
           />
         </div>
@@ -937,6 +953,9 @@ export default function Editor({ file, onBack }: EditorProps) {
           selectedText={selectedText}
           selectedImage={selectedImage}
           selectedAnnotation={selectedAnnotation}
+          selectedSignature={selectedSignature}
+          onUpdateSignature={handleUpdateSignature}
+          onDeleteSignature={handleDeleteSignature}
           onUpdateText={handleUpdateText}
           onUpdateImage={handleUpdateImage}
           onUpdateAnnotation={handleUpdateAnnotation}

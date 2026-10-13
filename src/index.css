@@ -153,3 +153,10 @@ body {
   outline: 2px dashed #3b82f6;
   outline-offset: -4px;
 }
+@font-face {
+  font-family: 'Noto Sans Oriya';
+  src: url('/fonts/NotoSansOriya-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}

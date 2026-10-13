@@ -14,6 +14,7 @@ interface PdfCanvasProps {
   selectedTextId: string | null;
   selectedImageId: string | null;
   selectedAnnotationId: string | null;
+  selectedSignatureId: string | null;
   annotationColor: string;
   annotationWidth: number;
   shapeKind: ShapeKind;
@@ -21,11 +22,14 @@ interface PdfCanvasProps {
   onSelectText: (id: string | null) => void;
   onSelectImage: (id: string | null) => void;
   onSelectAnnotation: (id: string | null) => void;
+  onSelectSignature: (id: string | null) => void;
   onAddText: (page: number, bbox: BoundingBox, originalText?: string, style?: Partial<TextEdit>) => void;
   onAddAnnotation: (ann: Omit<Annotation, 'id'>) => void;
   onUpdateAnnotation: (id: string, updates: Partial<Annotation>) => void;
   onUpdateImage: (id: string, updates: Partial<ImageItem>) => void;
   onUpdateText: (id: string, updates: Partial<TextEdit>) => void;
+  onUpdateSignature: (id: string, updates: { bbox?: BoundingBox }) => void;
+  onDeleteSignature: (id: string) => void;
   onAddImageItem: (page: number, bbox: BoundingBox) => void;
 }
 
@@ -50,8 +54,8 @@ export default function PdfCanvas(props: PdfCanvasProps) {
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const [dragInfo, setDragInfo] = useState<{ type: 'text' | 'image' | 'annotation'; id: string; offsetX: number; offsetY: number } | null>(null);
-  const [resizeInfo, setResizeInfo] = useState<{ type: 'text' | 'image' | 'annotation'; id: string; handle: string; startX: number; startY: number; origBbox: BoundingBox } | null>(null);
+  const [dragInfo, setDragInfo] = useState<{ type: 'text' | 'image' | 'annotation' | 'signature'; id: string; offsetX: number; offsetY: number; pageNumber: number } | null>(null);
+  const [resizeInfo, setResizeInfo] = useState<{ type: 'text' | 'image' | 'signature'; id: string; handle: string; startX: number; startY: number; origBbox: BoundingBox; pageNumber: number } | null>(null);
   const drawingPageRef = useRef<number>(1);
 
   // Render all pages
@@ -150,15 +154,16 @@ export default function PdfCanvas(props: PdfCanvasProps) {
     return { x, y };
   }, [props.zoom]);
 
-  const beginResize = (e: React.MouseEvent, type: 'text' | 'image', id: string, handle: string, bbox: BoundingBox) => {
+  const beginResize = (e: React.MouseEvent, type: 'text' | 'image' | 'signature', id: string, handle: string, bbox: BoundingBox, pageNumber: number) => {
     e.preventDefault();
     e.stopPropagation();
     const pageDiv = (e.currentTarget as HTMLElement).closest('[data-page-idx]') as HTMLDivElement | null;
     if (!pageDiv) return;
     const coords = getPageCoords(e, pageDiv);
     if (type === 'text') props.onSelectText(id);
-    else props.onSelectImage(id);
-    setResizeInfo({ type, id, handle, startX: coords.x, startY: coords.y, origBbox: { ...bbox } });
+    else if (type === 'image') props.onSelectImage(id);
+    else props.onSelectSignature(id);
+    setResizeInfo({ type, id, handle, startX: coords.x, startY: coords.y, origBbox: { ...bbox }, pageNumber });
   };
 
   // Mouse down on canvas
@@ -179,10 +184,11 @@ export default function PdfCanvas(props: PdfCanvasProps) {
       props.onSelectText(dataId);
       props.onSelectImage(null);
       props.onSelectAnnotation(null);
+      props.onSelectSignature(null);
       if (props.activeTool === 'editText') {
         setEditingTextId(dataId);
       }
-      setDragInfo({ type: 'text', id: dataId, offsetX: 0, offsetY: 0 });
+      setDragInfo({ type: 'text', id: dataId, offsetX: 0, offsetY: 0, pageNumber: pageState?.pageNumber ?? displayIdx + 1 });
       return;
     }
 
@@ -190,7 +196,8 @@ export default function PdfCanvas(props: PdfCanvasProps) {
       props.onSelectImage(dataId);
       props.onSelectText(null);
       props.onSelectAnnotation(null);
-      setDragInfo({ type: 'image', id: dataId, offsetX: coords.x, offsetY: coords.y });
+      props.onSelectSignature(null);
+      setDragInfo({ type: 'image', id: dataId, offsetX: coords.x, offsetY: coords.y, pageNumber: pageState?.pageNumber ?? displayIdx + 1 });
       return;
     }
 
@@ -198,7 +205,8 @@ export default function PdfCanvas(props: PdfCanvasProps) {
       props.onSelectAnnotation(dataId);
       props.onSelectText(null);
       props.onSelectImage(null);
-      setDragInfo({ type: 'annotation', id: dataId, offsetX: coords.x, offsetY: coords.y });
+      props.onSelectSignature(null);
+      setDragInfo({ type: 'annotation', id: dataId, offsetX: coords.x, offsetY: coords.y, pageNumber: pageState?.pageNumber ?? displayIdx + 1 });
       return;
     }
 
@@ -209,6 +217,7 @@ export default function PdfCanvas(props: PdfCanvasProps) {
       props.onSelectText(null);
       props.onSelectImage(null);
       props.onSelectAnnotation(null);
+      props.onSelectSignature(null);
       setEditingTextId(null);
     } else if (props.activeTool === 'addText') {
       props.onAddText(pageNumber, { x: coords.x - 50, y: coords.y - 10, width: 100, height: 20 });
@@ -253,7 +262,10 @@ export default function PdfCanvas(props: PdfCanvasProps) {
   // Mouse move
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDrawing && !freehandPoints.length && !dragInfo && !resizeInfo) return;
-    const pageDiv = (e.target as HTMLElement).closest('[data-page-idx]') as HTMLDivElement;
+    const activePageNumber = resizeInfo?.pageNumber ?? dragInfo?.pageNumber;
+    const pageDiv = activePageNumber
+      ? [...pageRefs.current.values()].find((element) => Number(element.dataset.pageNumber) === activePageNumber)
+      : (e.target as HTMLElement).closest('[data-page-idx]') as HTMLDivElement | null;
     if (!pageDiv) return;
     const coords = getPageCoords(e, pageDiv);
 
@@ -268,7 +280,8 @@ export default function PdfCanvas(props: PdfCanvasProps) {
       if (next.width >= 12 && next.height >= 12) {
         const updates = { bbox: next };
         if (resizeInfo.type === 'text') props.onUpdateText(resizeInfo.id, updates);
-        else props.onUpdateImage(resizeInfo.id, updates);
+        else if (resizeInfo.type === 'image') props.onUpdateImage(resizeInfo.id, updates);
+        else props.onUpdateSignature(resizeInfo.id, updates);
       }
       return;
     }
@@ -304,6 +317,9 @@ export default function PdfCanvas(props: PdfCanvasProps) {
           });
           setDragInfo({ ...dragInfo, offsetX: coords.x, offsetY: coords.y });
         }
+      } else if (dragInfo.type === 'signature') {
+        const signature = props.documentState.signatures.find((item) => item.id === dragInfo.id);
+        if (signature) props.onUpdateSignature(signature.id, { bbox: { ...signature.bbox, x: coords.x - dragInfo.offsetX, y: coords.y - dragInfo.offsetY } });
       }
     }
   }, [isDrawing, freehandPoints.length, dragInfo, resizeInfo, drawStart, props, getPageCoords]);
@@ -485,6 +501,7 @@ export default function PdfCanvas(props: PdfCanvasProps) {
             key={`${page.pageNumber}-${displayIdx}`}
             data-page-idx={displayIdx}
             ref={(el) => { if (el) pageRefs.current.set(displayIdx, el); }}
+            data-page-number={page.pageNumber}
             className="relative bg-white shadow-lg flex-shrink-0"
             style={{
               width: pageWidth,
@@ -609,9 +626,10 @@ export default function PdfCanvas(props: PdfCanvasProps) {
                   props.onSelectText(edit.id);
                   props.onSelectImage(null);
                   props.onSelectAnnotation(null);
+                  props.onSelectSignature(null);
                   const pageDiv = e.currentTarget.closest('[data-page-idx]') as HTMLDivElement;
                   const coords = getPageCoords(e, pageDiv);
-                  setDragInfo({ type: 'text', id: edit.id, offsetX: coords.x - edit.bbox.x, offsetY: coords.y - edit.bbox.y });
+                  setDragInfo({ type: 'text', id: edit.id, offsetX: coords.x - edit.bbox.x, offsetY: coords.y - edit.bbox.y, pageNumber: page.pageNumber });
                 }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
@@ -636,10 +654,10 @@ export default function PdfCanvas(props: PdfCanvasProps) {
                 </div>
                 {props.selectedTextId === edit.id && (
                   <>
-                    <div className="resize-handle" style={{ top: -5, left: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'nw', edit.bbox)} />
-                    <div className="resize-handle" style={{ top: -5, right: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'ne', edit.bbox)} />
-                    <div className="resize-handle" style={{ bottom: -5, left: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'sw', edit.bbox)} />
-                    <div className="resize-handle" style={{ bottom: -5, right: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'se', edit.bbox)} />
+                    <div className="resize-handle" style={{ top: -5, left: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'nw', edit.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ top: -5, right: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'ne', edit.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ bottom: -5, left: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'sw', edit.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ bottom: -5, right: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'text', edit.id, 'se', edit.bbox, page.pageNumber)} />
                   </>
                 )}
               </div>
@@ -667,11 +685,12 @@ export default function PdfCanvas(props: PdfCanvasProps) {
                   props.onSelectImage(img.id);
                   props.onSelectText(null);
                   props.onSelectAnnotation(null);
+                  props.onSelectSignature(null);
                   const pageDiv = e.currentTarget.closest('[data-page-idx]') as HTMLDivElement;
                   const coords = getPageCoords(e, pageDiv);
                   const px = coords.x - img.bbox.x;
                   const py = coords.y - img.bbox.y;
-                  setDragInfo({ type: 'image', id: img.id, offsetX: px, offsetY: py });
+                  setDragInfo({ type: 'image', id: img.id, offsetX: px, offsetY: py, pageNumber: page.pageNumber });
                 }}
               >
                 {img.dataUrl ? (
@@ -689,10 +708,10 @@ export default function PdfCanvas(props: PdfCanvasProps) {
                 ) : null}
                 {props.selectedImageId === img.id && (
                   <>
-                    <div className="resize-handle" style={{ top: -5, left: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'nw', img.bbox)} />
-                    <div className="resize-handle" style={{ top: -5, right: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'ne', img.bbox)} />
-                    <div className="resize-handle" style={{ bottom: -5, left: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'sw', img.bbox)} />
-                    <div className="resize-handle" style={{ bottom: -5, right: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'se', img.bbox)} />
+                    <div className="resize-handle" style={{ top: -5, left: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'nw', img.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ top: -5, right: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'ne', img.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ bottom: -5, left: -5, cursor: 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'sw', img.bbox, page.pageNumber)} />
+                    <div className="resize-handle" style={{ bottom: -5, right: -5, cursor: 'nwse-resize' }} onMouseDown={(e) => beginResize(e, 'image', img.id, 'se', img.bbox, page.pageNumber)} />
                   </>
                 )}
               </div>
@@ -804,10 +823,11 @@ export default function PdfCanvas(props: PdfCanvasProps) {
                   props.onSelectAnnotation(ann.id);
                   props.onSelectText(null);
                   props.onSelectImage(null);
+                  props.onSelectSignature(null);
                   const rect = e.currentTarget.getBoundingClientRect();
                   const px = (e.clientX - rect.left) / props.zoom;
                   const py = (e.clientY - rect.top) / props.zoom;
-                  setDragInfo({ type: 'annotation', id: ann.id, offsetX: px, offsetY: py });
+                  setDragInfo({ type: 'annotation', id: ann.id, offsetX: px, offsetY: py, pageNumber: page.pageNumber });
                 }}
               >
                 {ann.text || 'Click to edit'}
@@ -818,15 +838,33 @@ export default function PdfCanvas(props: PdfCanvasProps) {
             {getSignaturesForPage(page.pageNumber).map((sig) => (
               <div
                 key={sig.id}
-                className="absolute border-2 border-transparent hover:border-blue-300"
+                data-type="signature"
+                data-id={sig.id}
+                className={`absolute border-2 ${props.selectedSignatureId === sig.id ? 'border-blue-500' : 'border-transparent hover:border-blue-300'}`}
                 style={{
                   left: sig.bbox.x * props.zoom,
                   top: sig.bbox.y * props.zoom,
                   width: sig.bbox.width * props.zoom,
                   height: sig.bbox.height * props.zoom,
+                  cursor: 'move',
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  props.onSelectSignature(sig.id);
+                  props.onSelectText(null); props.onSelectImage(null); props.onSelectAnnotation(null);
+                  const coords = getPageCoords(e, e.currentTarget.closest('[data-page-idx]') as HTMLDivElement);
+                  setDragInfo({ type: 'signature', id: sig.id, offsetX: coords.x - sig.bbox.x, offsetY: coords.y - sig.bbox.y, pageNumber: page.pageNumber });
                 }}
               >
                 <img src={sig.dataUrl} alt="signature" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+                {props.selectedSignatureId === sig.id && (
+                  <>
+                    {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => (
+                      <div key={handle} className="resize-handle" style={{ position: 'absolute', width: 10, height: 10, borderRadius: 5, background: 'white', border: '2px solid #2563eb', ...(handle.includes('n') ? { top: -6 } : { bottom: -6 }), ...(handle.includes('w') ? { left: -6 } : { right: -6 }), cursor: handle === 'nw' || handle === 'se' ? 'nwse-resize' : 'nesw-resize' }} onMouseDown={(e) => beginResize(e, 'signature', sig.id, handle, sig.bbox, page.pageNumber)} />
+                    ))}
+                    <button type="button" title="Delete signature" className="absolute -right-3 -top-3 z-10 rounded-full bg-red-600 px-1.5 text-white shadow" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); props.onDeleteSignature(sig.id); props.onSelectSignature(null); }}>×</button>
+                  </>
+                )}
               </div>
             ))}
 
