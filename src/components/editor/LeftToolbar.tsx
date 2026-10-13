@@ -41,7 +41,7 @@ const TOOLS: { id: ToolType; icon: React.ComponentType<{ className?: string }>; 
 
 export default function LeftToolbar({ activeTool, onToolChange }: LeftToolbarProps) {
   return (
-    <div className="w-14 bg-white border-r border-gray-200 flex flex-col items-center py-3 gap-1 overflow-y-auto flex-shrink-0">
+    <div className="w-14 bg-white border-r border-gray-200 flex flex-col items-center py-3 gap-1 overflow-y-auto flex-shrink-0 max-md:order-3 max-md:w-full max-md:h-14 max-md:flex-row max-md:justify-start max-md:overflow-x-auto max-md:overflow-y-hidden max-md:border-r-0 max-md:border-t max-md:px-2 max-md:py-1">
       {TOOLS.map((tool) => (
         <button
           key={tool.id}

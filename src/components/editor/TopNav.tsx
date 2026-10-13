@@ -79,9 +79,9 @@ export default function TopNav(props: TopNavProps) {
   };
 
   return (
-    <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 flex-shrink-0 gap-2">
+    <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 flex-shrink-0 gap-2 max-md:px-1 max-md:gap-1">
       {/* Left section */}
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2 min-w-0 max-md:max-w-[27vw] max-md:gap-0">
         <button
           onClick={props.onBack}
           className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
@@ -116,7 +116,7 @@ export default function TopNav(props: TopNavProps) {
       </div>
 
       {/* Center section */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 max-md:flex-1 max-md:min-w-0 max-md:justify-start max-md:overflow-x-auto">
         <button
           onClick={props.onUndo}
           disabled={!props.canUndo}
@@ -193,7 +193,7 @@ export default function TopNav(props: TopNavProps) {
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0 max-md:gap-1">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           {props.saveStatus === 'saved' && <Check className="w-3.5 h-3.5 text-emerald-500" />}
           {props.saveStatus === 'saving' && <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}

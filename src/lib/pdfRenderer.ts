@@ -16,9 +16,9 @@ export async function loadPdfFromFile(
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({
     data: arrayBuffer,
-    cMapUrl: 'https://unpkg.com/pdfjs-dist@6.4.299/cmaps/',
+    cMapUrl: '/pdfjs/cmaps/',
     cMapPacked: true,
-    standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@6.4.299/standard_fonts/',
+    standardFontDataUrl: '/pdfjs/standard_fonts/',
   });
 
   if (onProgress) {

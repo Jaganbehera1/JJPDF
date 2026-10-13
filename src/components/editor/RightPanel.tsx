@@ -90,7 +90,7 @@ export default function RightPanel(props: RightPanelProps) {
   // No selection or select tool
   if (props.activeTool === 'select' && !props.selectedText && !props.selectedImage && !props.selectedAnnotation && !props.selectedSignature) {
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title="Properties" />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <Settings className="w-10 h-10 text-gray-300 mb-3" />
@@ -103,7 +103,7 @@ export default function RightPanel(props: RightPanelProps) {
   if (props.selectedSignature) {
     const sig = props.selectedSignature;
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title="Signature" />
         <div className="p-4 space-y-4">
           <Section title="Size">
@@ -123,7 +123,7 @@ export default function RightPanel(props: RightPanelProps) {
   if (props.selectedText) {
     const st = props.selectedText;
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title="Text Properties" />
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           <Section title="Font">
@@ -210,7 +210,7 @@ export default function RightPanel(props: RightPanelProps) {
   if (props.selectedImage) {
     const si = props.selectedImage;
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title="Image Properties" />
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {si.isOriginal && (
@@ -268,7 +268,7 @@ export default function RightPanel(props: RightPanelProps) {
   if (props.selectedAnnotation) {
     const sa = props.selectedAnnotation;
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title="Annotation Properties" />
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           <Section title="Type">
@@ -341,7 +341,7 @@ export default function RightPanel(props: RightPanelProps) {
     void activeTab;
     void setActiveTab;
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
         <PanelHeader title={`${props.activeTool} Settings`} />
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {(isAnnotationTool || isAddText) && (
@@ -456,7 +456,7 @@ export default function RightPanel(props: RightPanelProps) {
 
   // Default empty state
   return (
-    <div className="w-72 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+    <div className="w-72 max-md:w-full max-md:border-l-0 max-md:border-t bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
       <PanelHeader title="Properties" />
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <Settings className="w-10 h-10 text-gray-300 mb-3" />

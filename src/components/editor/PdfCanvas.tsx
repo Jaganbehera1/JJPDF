@@ -471,7 +471,7 @@ export default function PdfCanvas(props: PdfCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-auto bg-gray-100 flex flex-col items-center py-6 px-4 gap-6"
+      className="flex-1 min-w-0 min-h-0 overflow-auto bg-gray-100 flex flex-col items-center py-6 px-4 gap-6 max-md:px-2 max-md:py-3"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}

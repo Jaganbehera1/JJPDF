@@ -69,7 +69,8 @@ export default function Editor({ file, onBack }: EditorProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [activeTool, setActiveTool] = useState<ToolType>('select');
-  const [zoom, setZoom] = useState(1.0);
+  const [zoom, setZoom] = useState(() => window.innerWidth < 768 ? Math.min(1, (window.innerWidth - 32) / 612) : 1);
+  const [mobileAutoFit, setMobileAutoFit] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
@@ -96,6 +97,17 @@ export default function Editor({ file, onBack }: EditorProps) {
   const fileInputReplaceRef = useRef<HTMLInputElement>(null);
   const fileInputMergeRef = useRef<HTMLInputElement>(null);
   const replaceImageIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const fitPage = () => {
+      if (!mobileAutoFit) return;
+      const pageWidth = docState?.pages[0]?.width || 612;
+      setZoom(window.innerWidth < 768 ? Math.min(1, Math.max(0.25, (window.innerWidth - 32) / pageWidth)) : 1);
+    };
+    fitPage();
+    window.addEventListener('resize', fitPage);
+    return () => window.removeEventListener('resize', fitPage);
+  }, [docState?.pages, mobileAutoFit]);
 
   // Load PDF on mount
   useEffect(() => {
@@ -840,7 +852,7 @@ export default function Editor({ file, onBack }: EditorProps) {
   if (!docState) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
+    <div className="h-screen h-[100dvh] min-h-0 flex flex-col bg-gray-100 overflow-hidden">
       <TopNav
         fileName={docState.fileName}
         onRename={(name) => updateDocState((prev) => ({ ...prev, fileName: name }))}
@@ -850,9 +862,9 @@ export default function Editor({ file, onBack }: EditorProps) {
         canUndo={undoStack.length > 0}
         canRedo={redoStack.length > 0}
         zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(3, z + 0.25))}
-        onZoomOut={() => setZoom((z) => Math.max(0.25, z - 0.25))}
-        onZoomReset={() => setZoom(1.0)}
+        onZoomIn={() => { setMobileAutoFit(false); setZoom((z) => Math.min(3, z + 0.25)); }}
+        onZoomOut={() => { setMobileAutoFit(false); setZoom((z) => Math.max(0.25, z - 0.25)); }}
+        onZoomReset={() => setMobileAutoFit(true)}
         currentPage={currentPage}
         totalPages={docState.pageOrder.filter((idx) => !docState.deletedPages.includes(idx)).length}
         onPrevPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -866,10 +878,10 @@ export default function Editor({ file, onBack }: EditorProps) {
         isDownloading={isDownloading}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex overflow-hidden max-md:flex-col">
         <LeftToolbar activeTool={activeTool} onToolChange={handleToolChange} />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden max-md:order-1">
           {/* Secondary toolbar for document operations */}
           <SecondaryToolbar
             onMerge={() => fileInputMergeRef.current?.click()}
@@ -948,6 +960,7 @@ export default function Editor({ file, onBack }: EditorProps) {
           />
         </div>
 
+        <div className={`max-md:order-2 ${activeTool === 'select' && !selectedText && !selectedImage && !selectedAnnotation && !selectedSignature ? 'max-md:hidden' : 'max-md:max-h-[32dvh] max-md:overflow-y-auto'}`}>
         <RightPanel
           activeTool={activeTool}
           selectedText={selectedText}
@@ -971,6 +984,7 @@ export default function Editor({ file, onBack }: EditorProps) {
           shapeKind={shapeKind}
           onShapeKindChange={setShapeKind}
         />
+        </div>
       </div>
 
       {showOrganize && docState && (
@@ -1043,7 +1057,7 @@ function SecondaryToolbar({ onMerge, onSplitPdf, onOcr, onAddWatermark, onAddPag
   }, []);
 
   return (
-    <div className="h-10 bg-white border-b border-gray-200 flex items-center px-3 gap-1 flex-shrink-0">
+    <div className="h-10 bg-white border-b border-gray-200 flex items-center px-3 gap-1 flex-shrink-0 overflow-x-auto max-md:px-1">
       <button onClick={onMerge} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 transition-colors">
         Merge PDFs
       </button>
